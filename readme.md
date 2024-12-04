@@ -9,10 +9,10 @@ Shell scripts to perform sign up and login against Auth0's [Native Passkeys API]
 
 ## Sign Up
 ```bash
-./signup.sh -d custom-domaian.com -c client_id -r db-connection-name -u pk@example.com -k private-key.pem
+./signup.sh -d domain.com -c client_id -r connection -u pk@example.com 
 ```
 
 ## Login
 ```bash
-./login.sh -d custom-domaian.com -c client_id -r db-connection-name -u pk@example.com -k private-key.pem
+./login.sh  -d domain.com -c client_id -r connection -u pk@example.com 
 ```
