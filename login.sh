@@ -79,8 +79,8 @@ SIGNUP_RESPONSE=$(curl -s -X POST "https://$AUTH0_DOMAIN/passkey/challenge" \
         "realm": "'"$REALM"'"
     }')
 
-CHALLENGE=$(echo "$SIGNUP_RESPONSE" | jq -r '.authn_params_public_key.challenge')
-SESSION_ID=$(echo "$SIGNUP_RESPONSE" | jq -r '.auth_session')
+CHALLENGE=$(echo "$SIGNUP_RESPONSE" | jq -r '.authn_params_public_key.challenge // empty')
+SESSION_ID=$(echo "$SIGNUP_RESPONSE" | jq -r '.auth_session // empty')
 
 if [[ -z "$CHALLENGE" || -z "$SESSION_ID" ]]; then
     echo "Failed to obtain challenge and session ID. Response: $SIGNUP_RESPONSE"
@@ -122,7 +122,14 @@ AUTH_RESPONSE=$(curl -s -X POST "https://$AUTH0_DOMAIN/oauth/token" \
     }')
 readonly AUTH_RESPONSE
 
-ID_TOKEN=$(echo "$AUTH_RESPONSE" | jq -r '.id_token')
+if jq -e . >/dev/null 2>&1 <<< "${AUTH_RESPONSE}"; then
+  ID_TOKEN=$(echo "$AUTH_RESPONSE" | jq '.id_token // empty')
+else
+  echo "Failed to parse JSON, or got false/null. stored in AUTH_RESPONSE.html"
+  echo $AUTH_RESPONSE > AUTH_RESPONSE.html
+  exit 1
+fi
+
 readonly ID_TOKEN
 
 if [[ -z "$ID_TOKEN" ]]; then

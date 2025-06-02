@@ -75,16 +75,11 @@ SIGNUP_RESPONSE=$(curl -s -X POST "https://$AUTH0_DOMAIN/passkey/register" \
         }
     }')
 
-CHALLENGE=$(echo "$SIGNUP_RESPONSE" | jq -r '.authn_params_public_key.challenge')
-SESSION_ID=$(echo "$SIGNUP_RESPONSE" | jq -r '.auth_session')
-USER_ID=$(echo "$SIGNUP_RESPONSE" | jq -r '.authn_params_public_key.user.id')
-
-if [[ -z "$CHALLENGE" || -z "$SESSION_ID" ]]; then
-    echo "Failed to obtain challenge and session ID. Response: $SIGNUP_RESPONSE"
-    exit 1
+register_error=$(echo "$SIGNUP_RESPONSE" | jq -r '.error // empty')
+if [[ -n "${register_error}" ]]; then
+  echo >&2 "ERROR: passkey register error: ${SIGNUP_RESPONSE}"
+  exit 1
 fi
-
-echo "Signup challenge obtained. Challenge: $CHALLENGE, Session ID: $SESSION_ID"
 
 [[ ! -d "${DIR}/.store" ]] && mkdir -p "${DIR}/.store"
 
@@ -93,6 +88,17 @@ if [[ -f $STORE ]]; then
     echo "WARNING: store already exists at $STORE"
     #exit 1
 fi
+
+CHALLENGE=$(echo "$SIGNUP_RESPONSE" | jq -r '.authn_params_public_key.challenge // empty')
+SESSION_ID=$(echo "$SIGNUP_RESPONSE" | jq -r '.auth_session // empty')
+USER_ID=$(echo "$SIGNUP_RESPONSE" | jq -r '.authn_params_public_key.user.id // empty')
+
+if [[ -z "$CHALLENGE" || -z "$SESSION_ID" ]]; then
+    echo "Failed to obtain challenge and session ID. Response: $SIGNUP_RESPONSE"
+    exit 1
+fi
+
+echo "Signup challenge obtained. Challenge: $CHALLENGE, Session ID: $SESSION_ID"
 
 go run attestation.go --rp "${AUTH0_DOMAIN}" --challenge "${CHALLENGE}" --username "${EMAIL}" --userid "${USER_ID}" --key "${PRIVATE_KEY_FILE}" > "${STORE}"
 
@@ -121,7 +127,8 @@ AUTH_RESPONSE=$(curl -s -X POST "https://$AUTH0_DOMAIN/oauth/token" \
         }
     }')
 
-ID_TOKEN=$(echo "$AUTH_RESPONSE" | jq -r '.id_token')
+ID_TOKEN=$(echo "$AUTH_RESPONSE" | jq -r '.id_token // empty')
+readonly ID_TOKEN
 
 if [[ -z "$ID_TOKEN" ]]; then
     echo "Authentication failed. Response: $AUTH_RESPONSE"
