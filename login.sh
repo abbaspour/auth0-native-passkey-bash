@@ -123,7 +123,7 @@ AUTH_RESPONSE=$(curl -s -X POST "https://$AUTH0_DOMAIN/oauth/token" \
 readonly AUTH_RESPONSE
 
 if jq -e . >/dev/null 2>&1 <<< "${AUTH_RESPONSE}"; then
-  ID_TOKEN=$(echo "$AUTH_RESPONSE" | jq '.id_token // empty')
+  ID_TOKEN=$(jq -r '.id_token // empty' <<< "${AUTH_RESPONSE}")
 else
   echo "Failed to parse JSON, or got false/null. stored in AUTH_RESPONSE.html"
   echo $AUTH_RESPONSE > AUTH_RESPONSE.html
@@ -137,4 +137,6 @@ if [[ -z "$ID_TOKEN" ]]; then
     exit 1
 fi
 
-echo "Authentication successful. ID token: $ID_TOKEN"
+echo "Authentication successful. ID token: ${ID_TOKEN}"
+
+jq -Rr 'split(".") | .[1] | @base64d | fromjson' <<< "${ID_TOKEN}"

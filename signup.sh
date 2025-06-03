@@ -136,3 +136,5 @@ if [[ -z "$ID_TOKEN" ]]; then
 fi
 
 echo "Authentication successful. ID Token: $ID_TOKEN"
+
+jq -Rr 'split(".") | .[1] | @base64d | fromjson' <<< "${ID_TOKEN}"
