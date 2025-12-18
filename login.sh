@@ -22,6 +22,7 @@ USAGE: $0 [-e env] [-t tenant] [-d domain] [-c client_id] [-x client_secret] [-r
         -r realm       # Auth0 database connection name, should be passkey enabled
         -u username    # user identifier (email, phone_number, username)
         -k file        # private key file
+        -f host        # optional x-forwarded-host
         -h|?           # usage
         -v             # verbose
 
@@ -36,11 +37,13 @@ declare CLIENT_ID=''
 declare REALM=''
 declare EMAIL=''
 declare PRIVATE_KEY_FILE="private-key.pem"
+declare FORWARDED_HOST=''
+declare FORWARDED_HOST_PARAM=''
 
 # shellcheck source="${DIR}/.env"
 [[ -f "${DIR}/.env" ]] && source "${DIR}/.env"
 
-while getopts "e:t:d:c:r:u:k:hv?" opt; do
+while getopts "e:t:d:c:r:u:k:f:hv?" opt; do
   case ${opt} in
   e) source "${OPTARG}" ;;
   t) AUTH0_DOMAIN=$(echo "${OPTARG}.auth0.com" | tr '@' '.') ;;
@@ -49,6 +52,7 @@ while getopts "e:t:d:c:r:u:k:hv?" opt; do
   r) REALM=${OPTARG} ;;
   u) EMAIL=${OPTARG} ;;
   k) PRIVATE_KEY_FILE=${OPTARG} ;;
+  f) FORWARDED_HOST_PARAM=${OPTARG} ;;
   v) set -x ;;
   h | ?) usage 0 ;;
   *) usage 1 ;;
@@ -59,6 +63,8 @@ done
 [[ -z "${CLIENT_ID}" ]] && { echo >&2 "ERROR: CLIENT_ID undefined"; usage 1; }
 [[ -z "${REALM}" ]] && { echo >&2 "ERROR: REALM undefined"; usage 1; }
 [[ -z "${EMAIL}" ]] && { echo >&2 "ERROR: username undefined"; usage 1; }
+
+FORWARDED_HOST=${FORWARDED_HOST_PARAM:-${AUTH0_DOMAIN}}
 
 
 if [[ ! -f $PRIVATE_KEY_FILE ]]; then
@@ -74,6 +80,7 @@ fi
 
 SIGNUP_RESPONSE=$(curl -s -X POST "https://$AUTH0_DOMAIN/passkey/challenge" \
     -H "Content-Type: application/json" \
+    -H "x-forwarded-host: ${FORWARDED_HOST}" \
     -d '{
         "client_id": "'"$CLIENT_ID"'",
         "realm": "'"$REALM"'"
@@ -92,7 +99,8 @@ echo "challenge obtained. Challenge: $CHALLENGE, Session ID: $SESSION_ID"
 CREDENTIAL_ID=$(jq -r .responseDecoded.rawId "${STORE}")
 USER_HANDLE=$(jq -r .user.id "${STORE}")
 
-ASSERTION_RESPONSE=$(go run assertion.go --challenge "${CHALLENGE}" --username "${EMAIL}"  --userid "${USER_HANDLE}" --rp "${AUTH0_DOMAIN}" --key "${PRIVATE_KEY_FILE}" --credId "${CREDENTIAL_ID}")
+#ASSERTION_RESPONSE=$(go run assertion.go --challenge "${CHALLENGE}" --username "${EMAIL}"  --userid "${USER_HANDLE}" --rp "${AUTH0_DOMAIN}" --key "${PRIVATE_KEY_FILE}" --credId "${CREDENTIAL_ID}")
+ASSERTION_RESPONSE=$(go run assertion.go --challenge "${CHALLENGE}" --username "${EMAIL}"  --userid "${USER_HANDLE}" --rp "${FORWARDED_HOST}" --key "${PRIVATE_KEY_FILE}" --credId "${CREDENTIAL_ID}")
 
 ATTESTATION_OBJECT=$(echo "${ASSERTION_RESPONSE}" | jq -r .response.authenticatorData)
 CLIENT_DATA_JSON=$(echo "${ASSERTION_RESPONSE}" | jq -r .response.clientDataJSON)
@@ -100,6 +108,7 @@ SIGNATURE=$(echo "${ASSERTION_RESPONSE}" | jq -r .response.signature)
 
 AUTH_RESPONSE=$(curl -s -X POST "https://$AUTH0_DOMAIN/oauth/token" \
     -H "Content-Type: application/json" \
+    -H "x-forwarded-host: ${FORWARDED_HOST}" \
     -d '{
         "grant_type": "urn:okta:params:oauth:grant-type:webauthn",
         "client_id": "'"$CLIENT_ID"'",
