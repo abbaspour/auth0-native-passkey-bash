@@ -99,8 +99,8 @@ echo "challenge obtained. Challenge: $CHALLENGE, Session ID: $SESSION_ID"
 CREDENTIAL_ID=$(jq -r .responseDecoded.rawId "${STORE}")
 USER_HANDLE=$(jq -r .user.id "${STORE}")
 
-#ASSERTION_RESPONSE=$(go run assertion.go --challenge "${CHALLENGE}" --username "${EMAIL}"  --userid "${USER_HANDLE}" --rp "${AUTH0_DOMAIN}" --key "${PRIVATE_KEY_FILE}" --credId "${CREDENTIAL_ID}")
 ASSERTION_RESPONSE=$(go run assertion.go --challenge "${CHALLENGE}" --username "${EMAIL}"  --userid "${USER_HANDLE}" --rp "${FORWARDED_HOST}" --key "${PRIVATE_KEY_FILE}" --credId "${CREDENTIAL_ID}")
+#ASSERTION_RESPONSE=$(./assertion.sh --challenge "${CHALLENGE}" --username "${EMAIL}"  --userid "${USER_HANDLE}" --rp "${FORWARDED_HOST}" --key "${PRIVATE_KEY_FILE}" --credId "${CREDENTIAL_ID}")
 
 ATTESTATION_OBJECT=$(echo "${ASSERTION_RESPONSE}" | jq -r .response.authenticatorData)
 CLIENT_DATA_JSON=$(echo "${ASSERTION_RESPONSE}" | jq -r .response.clientDataJSON)

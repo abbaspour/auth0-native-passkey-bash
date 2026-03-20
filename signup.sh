@@ -107,8 +107,8 @@ fi
 
 echo "Signup challenge obtained. Challenge: $CHALLENGE, Session ID: $SESSION_ID"
 
-#go run attestation.go --rp "${AUTH0_DOMAIN}" --challenge "${CHALLENGE}" --username "${EMAIL}" --userid "${USER_ID}" --key "${PRIVATE_KEY_FILE}" > "${STORE}"
 go run attestation.go --rp "${FORWARDED_HOST}" --challenge "${CHALLENGE}" --username "${EMAIL}" --userid "${USER_ID}" --key "${PRIVATE_KEY_FILE}" > "${STORE}"
+#./attestation.sh --rp "${FORWARDED_HOST}" --challenge "${CHALLENGE}" --username "${EMAIL}" --userid "${USER_ID}" --key "${PRIVATE_KEY_FILE}" > "${STORE}"
 
 ATTESTATION_OBJECT=$(jq -r .response.attestationObject "${STORE}")
 CLIENT_DATA_JSON=$(jq -r .response.clientDataJSON "${STORE}")
