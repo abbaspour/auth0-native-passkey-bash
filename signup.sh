@@ -146,4 +146,4 @@ fi
 
 echo "Authentication successful. ID Token: $ID_TOKEN"
 
-jq -Rr 'split(".") | .[1] | @base64d | fromjson' <<< "${ID_TOKEN}"
+jq -Rr 'split(".")[1] | gsub("-";"+") | gsub("_";"/") | gsub("%3D";"=") | @base64d | fromjson' <<< "${ID_TOKEN}"
