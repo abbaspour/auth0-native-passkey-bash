@@ -105,16 +105,18 @@ jq -n \
     --argjson backed_up "${BACKED_UP}" \
     '[{
         "email": $email,
-        "passkeys": [{
-            "key_id": $key_id,
-            "public_key": $public_key,
+        "passkeys": {
             "user_handle": $user_handle,
-            "relying_party_id": $relying_party_id,
-            "credential_device_type": $device_type,
-            "aaguid": $aaguid,
-            "transports": $transports,
-            "credential_backed_up": $backed_up
-        }]
+            "credentials": [{
+              "credential_id": $key_id,
+              "public_key": $public_key,
+              "relying_party_id": $relying_party_id,
+              "credential_device_type": $device_type,
+              "aaguid": $aaguid,
+              "transports": $transports,
+              "credential_backed_up": $backed_up
+            }]
+        }
     }]' > "${OUTPUT_FILE}"
 
 echo "Bulk import file created: ${OUTPUT_FILE}"
